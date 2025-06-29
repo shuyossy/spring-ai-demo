@@ -16,6 +16,7 @@ public class AIConfig {
                 ただし、以下の制約を守ってください。
                   1. 1日あたりのアクティビティは1つまでに制限する
                   2. 日付を生成する際はISO-8601形式(yyyy-MM-dd)を使用する
+                  3. 必ず当日の天気を調べた上でプランを提案する
                 """;
         return ChatClient.builder(openAiChatModel).defaultSystem(systemPrompt).build();
     }
