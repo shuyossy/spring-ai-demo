@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Planner</title>
+    <link th:href="@{/webjars/bootstrap/css/bootstrap.min.css}" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+        }
+        .loading-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .plan-table {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">AI Travel Planner</h1>
+        
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form id="planForm" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="destination" class="form-label">旅行先</label>
+                        <input type="text" class="form-control" id="destination" name="destination" required
+                               th:field="${travelPlanForm.destination}">
+                        <div class="invalid-feedback">旅行先を入力してください</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDate" class="form-label">出発日</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" required
+                                   th:field="${travelPlanForm.startDate}">
+                            <div class="invalid-feedback">出発日を選択してください</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="endDate" class="form-label">帰着日</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" required
+                                   th:field="${travelPlanForm.endDate}">
+                            <div class="invalid-feedback">帰着日を選択してください</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary px-4">旅程生成</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4 shadow-sm plan-table">
+            <div class="card-body">
+                <h5 class="card-title mb-4">旅程表</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>日付</th>
+                                <th>時間</th>
+                                <th>活動</th>
+                                <th>詳細</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading">
+        <div class="loading-content">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-primary">旅程を生成中です...</p>
+        </div>
+    </div>
+
+    <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <script>
+        $(document).ready(function() {
+            const today = new Date().toISOString().split('T')[0];
+            $('#startDate').attr('min', today);
+            $('#endDate').attr('min', today);
+
+            $('#startDate').change(function() {
+                $('#endDate').attr('min', $(this).val());
+            });
+
+            $('#endDate').change(function() {
+                $('#startDate').attr('max', $(this).val());
+            });
+
+            $('#planForm').submit(function(e) {
+                e.preventDefault();
+                const form = $(this);
+                
+                if (!form[0].checkValidity()) {
+                    e.stopPropagation();
+                    form.addClass('was-validated');
+                    return;
+                }
+
+                const formData = {
+                    destination: $('#destination').val(),
+                    startDate: $('#startDate').val(),
+                    endDate: $('#endDate').val()
+                };
+
+                $('.loading').show();
+                $('.plan-table').hide();
+
+                $.ajax({
+                    url: '/generate',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(response) {
+                        $('#planTableBody').empty();
+                        response.items.forEach(function(item) {
+                            const row = `
+                                <tr>
+                                    <td>${item.date}</td>
+                                    <td>${item.time}</td>
+                                    <td>${item.activity}</td>
+                                    <td>${item.description}</td>
+                                </tr>
+                            `;
+                            $('#planTableBody').append(row);
+                        });
+                        $('.plan-table').show();
+                    },
+                    error: function() {
+                        alert('旅程の生成中にエラーが発生しました。もう一度お試しください。');
+                    },
+                    complete: function() {
+                        $('.loading').hide();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
